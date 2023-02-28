@@ -75,7 +75,10 @@ def main(putanja_train, putanja_val, putanja_test, p_index,lr,lambda_p,step, num
             set_zero_grad(segmentation_net)
 
             model_output = segmentation_net.forward(input_var)
+            print(len(model_output))
+            print(len(target_var))
             loss = loss_calc(loss_type, criterion, model_output, target_var, cfg.num_channels_lab, cfg.use_mask)
+            print(loss)
             loss.backward()
 
             optimizer.step()  # mnozi sa grad i menja weightove
@@ -166,7 +169,6 @@ def main(putanja_train, putanja_val, putanja_test, p_index,lr,lambda_p,step, num
         end_of_epoch_print(epoch,all_validation_losses)
 
 if __name__ == '__main__':
-    config = config_func_unet3(False)
     parser = argparse.ArgumentParser(description='My program description')
     parser.add_argument('--learning_rate', type=float, default=0.01, metavar="N")
     parser.add_argument('--lambda_parametar', type=int, default=0.99, metavar="N")
@@ -174,12 +176,13 @@ if __name__ == '__main__':
     parser.add_argument('--num_epochs', type=int, default=3, metavar="N")
     parser.add_argument('--loss_type', type=str, default="bce", metavar="N")
     parser.add_argument('--Batch_size', type=int, default=8, metavar="N")
+    parser.add_argument('--net_type', type=str, default="UNet3", metavar="N")
     parser.add_argument('--trening_location', type=str)
     parser.add_argument('--validation_location', type=str)
     parser.add_argument('--test_location', type=str)
     parser.add_argument('--new_location', type=str)
     args = parser.parse_args()
-    
+    config = config_func_unet3(False, args.net_type)
     data_location = args.new_location
 
     logging.basicConfig(
@@ -191,9 +194,9 @@ if __name__ == '__main__':
     learning_rate = args.learning_rate
     lambda_parametar = args.lambda_parametar
     stepovi_arr = args.stepovi_arr
-
     num_epochs = args.num_epochs
     loss_type = args.loss_type
+    net_type = args.net_type
     Batch_size = args.Batch_size
 
     trening_location = args.trening_location
@@ -207,6 +210,7 @@ if __name__ == '__main__':
     print(num_epochs)
     print(loss_type)
     print(Batch_size)
+    print(net_type)
     print(trening_location)
     print(validation_location)
     print(test_location)

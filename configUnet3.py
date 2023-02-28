@@ -1,8 +1,8 @@
 class config_func_unet3:
 
-    def __init__(self, server = True):
-
+    def __init__(self, server = True, net_type = "UNet3"):
         self.server = server       # Flag that indicates whether to use server or local machine
+        self.net_type = net_type  # Indicates Architecture that we want to use: UNet3, Unet_orig,UNet3_modified...
         self.load_numpy = True   # Flag that indicates what type of data we use as input
         self.use_mask = False # Flag that indicates are we masking data with boundery and valid masks
         self.use_weights = False  # Flag that indicates whether to use class weights when initializing loss function
@@ -23,7 +23,6 @@ class config_func_unet3:
         self.classes_labels = ['Borovnica']  # Classes that we are trying to detect. For BCE, background class is rejected
 
         self.loss_type = 'bce'       # Indicates loss type we want to use: bce, ce, ce_1
-        self.net_type = "UNet3"      # Indicates Architecture that we want to use: UNet3, Unet_orig,UNet3_modified...
         self.img_data_format = '.npy'  # Indicated the type of data we use as input
         self.set_random_seed = 15    # Setting random seed for torch random generator
         self.batch_size = 4      # Size of batch during the training,validation and testing

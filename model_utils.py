@@ -1,4 +1,8 @@
 from Unet_LtS import UNet3, UNet3_modified
+from SegNet import SegResNet
+from UperNet import UperNet
+from PSPNet import PSPDenseNet
+from DUC_HDCNet import DeepLab_DUC_HDC
 import segmentation_models_pytorch as smp
 import torch
 
@@ -14,9 +18,16 @@ def model_init(num_channels,num_channels_lab,img_h,img_w,zscore,net_type,device,
     elif net_type == "UNet++":
         segmentation_net = smp.UnetPlusPlus(in_channels=num_channels, encoder_depth=3, classes=num_channels_lab,
                                                 activation=None,decoder_channels=[64, 32, 16]).to(device=device)
+    elif net_type == "SegNet":
+        segmentation_net = SegResNet(num_channels_lab, num_channels, True, False)
+    elif net_type == "PSPNet":
+        segmentation_net = PSPDenseNet(num_channels_lab, num_channels)
+    elif net_type == "UperNet":
+        segmentation_net = UperNet(num_channels_lab, num_channels)
+    elif net_type == "DUC_HDCNet":
+        segmentation_net = DeepLab_DUC_HDC(num_channels_lab, num_channels)
 
     segmentation_net.to(device)
-
     if server:
         segmentation_net = torch.nn.DataParallel(segmentation_net, device_ids=GPU_list)
 
