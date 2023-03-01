@@ -1,6 +1,4 @@
 import torch.utils.data.dataloader
-import random
-import os
 from data_utils import *
 from loss_utils import *
 from model_utils import *
@@ -36,7 +34,7 @@ def main(putanja_train, putanja_val, putanja_test, p_index,lr,lambda_p,step, num
     segmentation_net = model_init(cfg.num_channels, cfg.num_channels_lab, cfg.img_h, cfg.img_w, cfg.zscore,
                                 cfg.net_type, cfg.device, cfg.server, cfg.GPU_list)
     segmentation_net = torch.nn.DataParallel(segmentation_net, device_ids=[0]).to(cfg.device)
-
+    # print(summary(segmentation_net))
     ############################
     ### model initialization ###
     ############################
@@ -75,12 +73,18 @@ def main(putanja_train, putanja_val, putanja_test, p_index,lr,lambda_p,step, num
             set_zero_grad(segmentation_net)
 
             model_output = segmentation_net.forward(input_var)
-            print(len(model_output))
-            print(len(target_var))
+            # print("############### TRAIN #####################")
+            # print(torch.unique(input_var))
+            # print(model_output)
+            # print(target_var)
+            # print(model_output.shape)
+            # print(target_var.shape)
+            # print(len(model_output))
+            # print(len(target_var))
+            print("################ TRAIN #####################")
             loss = loss_calc(loss_type, criterion, model_output, target_var, cfg.num_channels_lab, cfg.use_mask)
-            print(loss)
             loss.backward()
-
+            print(loss)
             optimizer.step()  # mnozi sa grad i menja weightove
 
             cfg.train_losses.append(loss.data)
@@ -112,7 +116,7 @@ def main(putanja_train, putanja_val, putanja_test, p_index,lr,lambda_p,step, num
             sys.exit(0)
 
         all_train_losses[epoch] = (torch.mean(torch.tensor(cfg.train_losses,dtype = torch.float32)))
-
+        input_var2 = input_var
 
         if epoch !=0 and (epoch % stepovi)==0 :
             print("epoha: " + str(epoch) +" , uradjen step!")
@@ -120,19 +124,46 @@ def main(putanja_train, putanja_val, putanja_test, p_index,lr,lambda_p,step, num
         if cfg.server:
             torch.cuda.empty_cache()
         train_part = "Valid"
+
+        # model_output = segmentation_net.forward(input_var2)
+        # print("DEBUG: ")
+        # print()
+        # print()
+        # print(model_output)
+        # print()
+        # print()
+
+
         segmentation_net.eval()
+
+        # model_output = segmentation_net.forward(input_var2)
+        # print("DEBUG: ")
+        # print()
+        # print()
+        # print(model_output)
+        # print()
+        # print()
 
         index_start = 0
 
         batch_iou = torch.zeros(size=(len(valid_loader.dataset.img_names), cfg.num_channels_lab*2),device=cfg.device,dtype=torch.float32)
         if loss_type == 'bce':
             batch_iou_bg = torch.zeros(size=(len(valid_loader.dataset.img_names),2),device=cfg.device,dtype=torch.float32)
-
+        
         for input_var, target_var, batch_names_valid in valid_loader:
 
             model_output = segmentation_net.forward(input_var)
             val_loss = loss_calc(loss_type,criterion,model_output,target_var, cfg.num_channels_lab ,cfg.use_mask)
-
+            # print("############### VALIDATION #####################")
+            # print(torch.unique(input_var))
+            # print(model_output)
+            # print(target_var)
+            # print(model_output.shape)
+            # print(target_var.shape)
+            # print(len(model_output))
+            # print(len(target_var))
+            print("################ VALIDATION #####################")
+            print(val_loss)
             cfg.validation_losses.append(val_loss.data)
 
             index_end = index_start + len(batch_names_valid)
@@ -170,17 +201,17 @@ def main(putanja_train, putanja_val, putanja_test, p_index,lr,lambda_p,step, num
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='My program description')
-    parser.add_argument('--learning_rate', type=float, default=0.01, metavar="N")
+    parser.add_argument('--learning_rate', type=float, default=0.001, metavar="N")
     parser.add_argument('--lambda_parametar', type=int, default=0.99, metavar="N")
     parser.add_argument('--stepovi_arr', type=int, default=5, metavar="N")
     parser.add_argument('--num_epochs', type=int, default=3, metavar="N")
     parser.add_argument('--loss_type', type=str, default="bce", metavar="N")
     parser.add_argument('--Batch_size', type=int, default=8, metavar="N")
-    parser.add_argument('--net_type', type=str, default="UNet3", metavar="N")
-    parser.add_argument('--trening_location', type=str)
-    parser.add_argument('--validation_location', type=str)
-    parser.add_argument('--test_location', type=str)
-    parser.add_argument('--new_location', type=str)
+    parser.add_argument('--net_type', type=str, default="SegNet", metavar="N")
+    parser.add_argument('--trening_location', default="trening_set_mini2/img", type=str)
+    parser.add_argument('--validation_location', default="validation_set_mini2/img", type=str)
+    parser.add_argument('--test_location', default="test_set_mini2/img", type=str)
+    parser.add_argument('--new_location', default="", type=str)
     args = parser.parse_args()
     config = config_func_unet3(False, args.net_type)
     data_location = args.new_location

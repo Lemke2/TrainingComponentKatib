@@ -19,14 +19,14 @@ def model_init(num_channels,num_channels_lab,img_h,img_w,zscore,net_type,device,
         segmentation_net = smp.UnetPlusPlus(in_channels=num_channels, encoder_depth=3, classes=num_channels_lab,
                                                 activation=None,decoder_channels=[64, 32, 16]).to(device=device)
     elif net_type == "SegNet":
-        segmentation_net = SegResNet(num_channels_lab, num_channels, True, False)
+        segmentation_net = SegResNet(num_classes = num_channels_lab, in_channels = num_channels)
     elif net_type == "PSPNet":
-        segmentation_net = PSPDenseNet(num_channels_lab, num_channels)
+        segmentation_net = PSPDenseNet(num_classes = num_channels_lab, in_channels = num_channels)
     elif net_type == "UperNet":
-        segmentation_net = UperNet(num_channels_lab, num_channels)
+        segmentation_net = UperNet(num_classes = num_channels_lab, in_channels = num_channels)
     elif net_type == "DUC_HDCNet":
-        segmentation_net = DeepLab_DUC_HDC(num_channels_lab, num_channels)
-
+        segmentation_net = DeepLab_DUC_HDC(num_classes = num_channels_lab, in_channels = num_channels)
+        
     segmentation_net.to(device)
     if server:
         segmentation_net = torch.nn.DataParallel(segmentation_net, device_ids=GPU_list)

@@ -1,1 +1,2 @@
 python Train_BGFG_BCE_with_weightsUnet3.py --learning_rate 0.1 --num_epochs 10 --trening_location C:/Users/daniv/Downloads/FullSet/trening_set_mini2/img --validation_location C:/Users/daniv/Downloads/FullSet/validation_set_mini2/img --test_location C:/Users/daniv/Downloads/FullSet/test_set_mini2/img --new_location logs.txt
+
