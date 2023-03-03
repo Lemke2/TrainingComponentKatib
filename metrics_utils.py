@@ -11,7 +11,7 @@ def final_metric_calculation(loss_type = 'bce',epoch=0,num_channels_lab = 1,clas
         iou_int_bg = batch_iou_bg[:,0]
         iou_un_bg = batch_iou_bg[:,1]
         iou_calc_bg = torch.div(torch.sum(iou_int_bg),torch.sum(iou_un_bg))
-        if train_part == 'Test':
+        if train_part == 'Valid':
             ispis = train_part + " Mean IOU Classwise/" + "Background" + " "+str(np.round(iou_calc_bg.detach().cpu(), 4))
             IOU.append(np.round(iou_calc_bg.detach().cpu().numpy(), 4))
             print(ispis)
@@ -24,7 +24,7 @@ def final_metric_calculation(loss_type = 'bce',epoch=0,num_channels_lab = 1,clas
         iou_un = batch_iou[:, index_miou + 1]
         iou_calc = torch.div(torch.sum(iou_int),torch.sum(iou_un))
         index_miou += 2
-        if train_part == 'Test':
+        if train_part == 'Valid':
             ispis = train_part+ " Mean IOU Classwise/" + classes_labels[klasa] + " " +str(np.round(iou_calc.detach().cpu(), 4))
             IOU.append(np.round(iou_calc.detach().cpu().numpy(), 4))
             print(ispis)

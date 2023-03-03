@@ -9,8 +9,8 @@ import logging
 import matplotlib.pyplot as plt
 from PIL import Image
 
-def end_of_epoch_print(epoch,all_validation_losses):
-    ispis = "{{metricName: loss, metricValue: {:.4f}}}\n".format(all_validation_losses[epoch])
+def end_of_epoch_print(epoch,IOU):
+    ispis = "{{metricName: accuracy, metricValue: {:.4f}}}\n".format(IOU)
     print(ispis)
     logging.info(ispis)
 
@@ -70,11 +70,11 @@ def main(putanja_train, putanja_val, putanja_test, p_index,lr,lambda_p,step, num
         #Validation
         train_part = "Valid"
         segmentation_net.eval()
-        # index_start = 0
+        index_start = 0
 
-        # batch_iou = torch.zeros(size=(len(valid_loader.dataset.img_names), cfg.num_channels_lab*2),device=cfg.device,dtype=torch.float32)
-        # if loss_type == 'bce':
-        #     batch_iou_bg = torch.zeros(size=(len(valid_loader.dataset.img_names),2),device=cfg.device,dtype=torch.float32)
+        batch_iou = torch.zeros(size=(len(valid_loader.dataset.img_names), cfg.num_channels_lab*2),device=cfg.device,dtype=torch.float32)
+        if loss_type == 'bce':
+            batch_iou_bg = torch.zeros(size=(len(valid_loader.dataset.img_names),2),device=cfg.device,dtype=torch.float32)
         
         for input_var, target_var, batch_names_valid in valid_loader:
 
@@ -84,16 +84,17 @@ def main(putanja_train, putanja_val, putanja_test, p_index,lr,lambda_p,step, num
             print(val_loss)
             cfg.validation_losses.append(val_loss.data)
             cfg.count_val += 1
-            # index_end = index_start + len(batch_names_valid)
-            # if loss_type == 'bce':
-            #     batch_iou[index_start:index_end, :], batch_iou_bg[index_start:index_end]= calc_metrics_pix(model_output, target_var,cfg.num_channels_lab,cfg.device,cfg.use_mask,loss_type)
-            # elif loss_type == 'ce':
-            #     batch_iou[index_start:index_end, :]= calc_metrics_pix(model_output, target_var, cfg.num_channels_lab, cfg.device, cfg.use_mask,loss_type)
-            # else:
-            #     print("Error: unimplemented loss type")
-            #     sys.exit(0)
-
-            # index_start += len(batch_names_valid)
+            index_end = index_start + len(batch_names_valid)
+            if loss_type == 'bce':
+                batch_iou[index_start:index_end, :], batch_iou_bg[index_start:index_end]= calc_metrics_pix(model_output, target_var,cfg.num_channels_lab,cfg.device,cfg.use_mask,loss_type)
+            elif loss_type == 'ce':
+                batch_iou[index_start:index_end, :]= calc_metrics_pix(model_output, target_var, cfg.num_channels_lab, cfg.device, cfg.use_mask,loss_type)
+            else:
+                print("Error: unimplemented loss type")
+                sys.exit(0)
+            print("AAAAAAAAAAAAAAAAAA")
+            print(batch_iou)
+            index_start += len(batch_names_valid)
 
             
 
@@ -102,51 +103,53 @@ def main(putanja_train, putanja_val, putanja_test, p_index,lr,lambda_p,step, num
         ### Racunanje finalne metrike nad celim validacionim setom ###
         ##############################################################
 
-        # if loss_type == 'bce':
-        #     final_metric_calculation(loss_type = loss_type, epoch=epoch,num_channels_lab = cfg.num_channels_lab,
-        #     classes_labels = cfg.classes_labels, batch_iou_bg = batch_iou_bg, batch_iou = batch_iou, train_part = train_part)
-        # elif loss_type == 'ce':
-        #     final_metric_calculation(loss_type = loss_type, epoch = epoch, num_channels_lab = cfg.num_channels_lab, 
-        #     classes_labels = cfg.classes_labels, batch_iou = batch_iou, train_part = train_part)
-        # else:
-        #     print("Error: Unimplemented loss type!")
-        #     sys.exit(0)
+        if loss_type == 'bce':
+            IOU = final_metric_calculation(loss_type = loss_type, epoch=epoch,num_channels_lab = cfg.num_channels_lab,
+            classes_labels = cfg.classes_labels, batch_iou_bg = batch_iou_bg, batch_iou = batch_iou, train_part = train_part)
+        elif loss_type == 'ce':
+            IOU = final_metric_calculation(loss_type = loss_type, epoch = epoch, num_channels_lab = cfg.num_channels_lab, 
+            classes_labels = cfg.classes_labels, batch_iou = batch_iou, train_part = train_part)
+        else:
+            print("Error: Unimplemented loss type!")
+            sys.exit(0)
 
         epoch_list[epoch] = epoch
         all_validation_losses[epoch] = (torch.mean(torch.tensor(cfg.validation_losses,dtype = torch.float32)))
-        end_of_epoch_print(epoch,all_validation_losses)
+        print(type(IOU))
+        print(IOU)
+        end_of_epoch_print(epoch,IOU)
 
     ######## TEST ############
     # CREATING IMAGES TO SEE IF NETWORKS ARE OUTPUTTING JUNK OR NOT
-    i = 0
-    for input_var, target_var, batch_names_valid in test_loader:
-        i+=1
-        model_output = segmentation_net.forward(input_var)
-        sigmoid_function = torch.nn.Sigmoid()
-        model_output = sigmoid_function(model_output)
+    # i = 0
+    # for input_var, target_var, batch_names_valid in test_loader:
+    #     i+=1
+    #     model_output = segmentation_net.forward(input_var)
+    #     sigmoid_function = torch.nn.Sigmoid()
+    #     model_output = sigmoid_function(model_output)
         
-        #extracting single images from batches
-        for x in range(model_output.shape[0]):
+    #     #extracting single images from batches
+    #     for x in range(model_output.shape[0]):
             
-            #only drawing pixels with value above 0.5
-            thresholded = model_output[x, :, :, :]>0.5
-            thresholded_tmp = thresholded.byte()
-            picturex = torch.squeeze(thresholded_tmp)
-            picturex = picturex.detach().numpy()
-            #converting to float so picture can be drawn in png format
-            picturex = picturex.astype(float)
-            im = Image.fromarray(picturex, 'L')
-            im.save("Slike/" +cfg.net_type + "/" + cfg.net_type + str(i) + str(x) + ".png")
+    #         #only drawing pixels with value above 0.5
+    #         thresholded = model_output[x, :, :, :]>0.5
+    #         thresholded_tmp = thresholded.byte()
+    #         picturex = torch.squeeze(thresholded_tmp)
+    #         picturex = picturex.detach().numpy()
+    #         #converting to float so picture can be drawn in png format
+    #         picturex = picturex.astype(float)
+    #         im = Image.fromarray(picturex, 'L')
+    #         im.save("Slike/" +cfg.net_type + "/" + cfg.net_type + str(i) + str(x) + ".png")
 
             
-            #drawing the target images for comparison
-            thresholded_target = target_var[x, :, :, :]>0.5
-            thresholded_target_tmp = thresholded_target.byte()
-            picturex_target = torch.squeeze(thresholded_target_tmp)
-            picturex_target = picturex_target.detach().numpy()
-            picturex_target = picturex_target.astype(float)
-            im_target = Image.fromarray(picturex_target, 'L')
-            im_target.save("Slike/" + cfg.net_type + "/Test_" + cfg.net_type + str(i) + str(x) + ".png")
+    #         #drawing the target images for comparison
+    #         thresholded_target = target_var[x, :, :, :]>0.5
+    #         thresholded_target_tmp = thresholded_target.byte()
+    #         picturex_target = torch.squeeze(thresholded_target_tmp)
+    #         picturex_target = picturex_target.detach().numpy()
+    #         picturex_target = picturex_target.astype(float)
+    #         im_target = Image.fromarray(picturex_target, 'L')
+    #         im_target.save("Slike/" + cfg.net_type + "/Test_" + cfg.net_type + str(i) + str(x) + ".png")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='My program description')
