@@ -6,7 +6,6 @@ from metrics_utils import*
 from configUnet3 import config_func_unet3
 import argparse
 import logging
-import matplotlib.pyplot as plt
 from PIL import Image
 
 def end_of_epoch_print(epoch,IOU):
@@ -70,11 +69,8 @@ def main(putanja_train, putanja_val, putanja_test, p_index,lr,lambda_p,step, num
         #Validation
         train_part = "Valid"
         segmentation_net.eval()
-        index_start = 0
 
-        batch_iou = torch.zeros(size=(len(valid_loader.dataset.img_names), cfg.num_channels_lab*2),device=cfg.device,dtype=torch.float32)
-        if loss_type == 'bce':
-            batch_iou_bg = torch.zeros(size=(len(valid_loader.dataset.img_names),2),device=cfg.device,dtype=torch.float32)
+        valid_scores = []
         
         for input_var, target_var, batch_names_valid in valid_loader:
 
@@ -84,17 +80,10 @@ def main(putanja_train, putanja_val, putanja_test, p_index,lr,lambda_p,step, num
             print(val_loss)
             cfg.validation_losses.append(val_loss.data)
             cfg.count_val += 1
-            index_end = index_start + len(batch_names_valid)
-            if loss_type == 'bce':
-                batch_iou[index_start:index_end, :], batch_iou_bg[index_start:index_end]= calc_metrics_pix(model_output, target_var,cfg.num_channels_lab,cfg.device,cfg.use_mask,loss_type)
-            elif loss_type == 'ce':
-                batch_iou[index_start:index_end, :]= calc_metrics_pix(model_output, target_var, cfg.num_channels_lab, cfg.device, cfg.use_mask,loss_type)
-            else:
-                print("Error: unimplemented loss type")
-                sys.exit(0)
-            print("AAAAAAAAAAAAAAAAAA")
-            print(batch_iou)
-            index_start += len(batch_names_valid)
+            #Racunanje F1 score-a na batchu - triple (accuracy, recall, batch_len)
+            batch_results = calc_f1_batch(model_output, target_var)
+            for score in batch_results:
+                valid_scores.append(score)
 
             
 
@@ -102,22 +91,21 @@ def main(putanja_train, putanja_val, putanja_test, p_index,lr,lambda_p,step, num
         ##############################################################
         ### Racunanje finalne metrike nad celim validacionim setom ###
         ##############################################################
-
-        if loss_type == 'bce':
-            IOU = final_metric_calculation(loss_type = loss_type, epoch=epoch,num_channels_lab = cfg.num_channels_lab,
-            classes_labels = cfg.classes_labels, batch_iou_bg = batch_iou_bg, batch_iou = batch_iou, train_part = train_part)
-        elif loss_type == 'ce':
-            IOU = final_metric_calculation(loss_type = loss_type, epoch = epoch, num_channels_lab = cfg.num_channels_lab, 
-            classes_labels = cfg.classes_labels, batch_iou = batch_iou, train_part = train_part)
-        else:
-            print("Error: Unimplemented loss type!")
-            sys.exit(0)
-
+        sum_accuracy = 0
+        sum_recall = 0
+        print(len(valid_scores))
+        for f1_score in valid_scores:
+            print(f1_score)
+            sum_accuracy += f1_score[0]
+            sum_recall += f1_score[1]
+        sum_accuracy = sum_accuracy / len(valid_scores)
+        sum_recall = sum_recall / len(valid_scores)
+        print("FINAL RESULTS")
+        print(sum_accuracy, sum_recall)
+        final_valid_metric = 2 * ((sum_accuracy * sum_recall)/(sum_accuracy + sum_recall))
         epoch_list[epoch] = epoch
         all_validation_losses[epoch] = (torch.mean(torch.tensor(cfg.validation_losses,dtype = torch.float32)))
-        print(type(IOU))
-        print(IOU)
-        end_of_epoch_print(epoch,IOU)
+        end_of_epoch_print(epoch,final_valid_metric)
 
     ######## TEST ############
     # CREATING IMAGES TO SEE IF NETWORKS ARE OUTPUTTING JUNK OR NOT
@@ -160,9 +148,9 @@ if __name__ == '__main__':
     parser.add_argument('--loss_type', type=str, default="bce", metavar="N")
     parser.add_argument('--Batch_size', type=int, default=8, metavar="N")
     parser.add_argument('--net_type', type=str, default="UNet3", metavar="N")
-    parser.add_argument('--trening_location', default="C:/Users/daniv/Downloads/FullSet/trening_set_mini2/img", type=str)
-    parser.add_argument('--validation_location', default="C:/Users/daniv/Downloads/FullSet/validation_set_mini2/img", type=str)
-    parser.add_argument('--test_location', default="C:/Users/daniv/Downloads/FullSet/test_set_mini2/img", type=str)
+    parser.add_argument('--trening_location', default="FullSet/trening_set_mini2/img", type=str)
+    parser.add_argument('--validation_location', default="FullSet/validation_set_mini2/img", type=str)
+    parser.add_argument('--test_location', default="FullSet/test_set_mini2/img", type=str)
     parser.add_argument('--new_location', default="", type=str)
     args = parser.parse_args()
     config = config_func_unet3(False, args.net_type)
